@@ -49,7 +49,7 @@ class Gun(pygame.sprite.Sprite):
         self.rotate_gun()
 
 class Bullet(pygame.sprite.Sprite):
-    def __init__(self, surf, pos, direction, groups, enemy_sprites, sound):
+    def __init__(self, surf, pos, direction, groups):
         super().__init__(groups)
         self.image = surf
         self.rect = self.image.get_frect(center = pos)
@@ -57,18 +57,8 @@ class Bullet(pygame.sprite.Sprite):
         self.speed = 1000
         self.spawn_time = pygame.time.get_ticks()
         self.lifetime = 2000
-        self.enemy_sprites = enemy_sprites
-        self.hit_sound = sound
-
-    def hit(self):
-        for enemy in self.enemy_sprites:
-            if enemy.rect.colliderect(self.rect):
-                self.hit_sound.play()
-                enemy.kill()
-                self.kill()
 
     def update(self, dt):
-        self.hit()
         self.rect.center += self.direction * self.speed * dt
 
         if pygame.time.get_ticks() - self.spawn_time > self.lifetime:
@@ -92,6 +82,9 @@ class Enemy(pygame.sprite.Sprite):
         self.direction = Vector2()
         self.speed = 100
 
+        # death
+        self.death_time = 0
+        self.death_duration = 50
 
     def collision(self, direction):
         for sprite in self.collision_sprites:
@@ -121,5 +114,21 @@ class Enemy(pygame.sprite.Sprite):
 
     def update(self, dt):
         self.get_direction()
-        self.move(dt)
-        self.animate(dt)
+        if self.death_time == 0:
+            self.move(dt)
+            self.animate(dt)
+        else:
+            self.death_timer()
+
+    def death_timer(self):
+        if pygame.time.get_ticks() - self.death_time > self.death_duration:
+            self.kill()
+
+    def destroy(self):
+        # start a timer, then destroy
+        # change the image to flash on destroy
+        self.death_time = pygame.time.get_ticks()
+
+        surf = pygame.mask.from_surface(self.frames[0]).to_surface()
+        surf.set_colorkey('black')
+        self.image = surf
