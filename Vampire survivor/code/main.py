@@ -25,7 +25,6 @@ class Game:
         self.shot_time = 0
         self.gun_cooldown = 100
 
-
         # enemies
         self.enemies = list(walk(join('images', 'enemies')))[0][1]
         self.enemy_event = pygame.event.custom_type()
@@ -33,13 +32,17 @@ class Game:
         self.spawn_positions = []
         self.enemy_frames = {}
 
+        # sounds
+        self.music = pygame.mixer.Sound(join('audio', 'music.wav'))
+        self.gun_sound = pygame.mixer.Sound(join('audio', 'shoot.wav'))
+        self.hit_sound = pygame.mixer.Sound(join('audio', 'impact.ogg'))
+
         # setup
         self.setup()
         self.load_images()
 
     def load_images(self):
         self.bullet_surf = pygame.image.load(join('images', 'gun', 'bullet.png')).convert_alpha()
-
 
         for enemy in self.enemies:
             self.enemy_frames[enemy] = []
@@ -50,7 +53,8 @@ class Game:
     def input(self):
         if pygame.mouse.get_pressed()[0] and self.can_shoot:
             pos = self.gun.rect.center + self.gun.player_direction * 50
-            Bullet(self.bullet_surf, pos, self.gun.player_direction, (self.all_sprites, self.bullet_sprites))
+            self.gun_sound.play()
+            Bullet(self.bullet_surf, pos, self.gun.player_direction, (self.all_sprites, self.bullet_sprites), self.enemy_sprites, self.hit_sound)
             self.can_shoot = False
             self.shot_time = pygame.time.get_ticks()
 
@@ -62,6 +66,8 @@ class Game:
 
     def setup(self):
         map = load_pygame(join('data', 'maps', 'world.tmx'))
+        self.music.play()
+
         for x, y, image, in map.get_layer_by_name('Ground').tiles():
             Sprite((x*TILE_SIZE, y*TILE_SIZE), image, self.all_sprites)
 

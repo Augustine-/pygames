@@ -49,7 +49,7 @@ class Gun(pygame.sprite.Sprite):
         self.rotate_gun()
 
 class Bullet(pygame.sprite.Sprite):
-    def __init__(self, surf, pos, direction, groups):
+    def __init__(self, surf, pos, direction, groups, enemy_sprites, sound):
         super().__init__(groups)
         self.image = surf
         self.rect = self.image.get_frect(center = pos)
@@ -57,8 +57,18 @@ class Bullet(pygame.sprite.Sprite):
         self.speed = 1000
         self.spawn_time = pygame.time.get_ticks()
         self.lifetime = 2000
+        self.enemy_sprites = enemy_sprites
+        self.hit_sound = sound
+
+    def hit(self):
+        for enemy in self.enemy_sprites:
+            if enemy.rect.colliderect(self.rect):
+                self.hit_sound.play()
+                enemy.kill()
+                self.kill()
 
     def update(self, dt):
+        self.hit()
         self.rect.center += self.direction * self.speed * dt
 
         if pygame.time.get_ticks() - self.spawn_time > self.lifetime:
