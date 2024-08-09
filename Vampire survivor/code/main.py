@@ -10,7 +10,7 @@ class Game:
         pygame.init()
         pygame.display.set_caption('vampire hunters')
         self.screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
-        pygame.mouse.set_visible(False)
+        # pygame.mouse.set_visible(False)
         self.running = True
         self.clock = pygame.time.Clock()
 
