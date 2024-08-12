@@ -11,6 +11,10 @@ class Paddle(pg.sprite.Sprite):
         self.rect = self.image.get_frect(center = POS['player'])
         self.old_rect = self.rect.copy()
 
+        # shadow
+        self.shadow_surf = self.image.copy()
+        pg.draw.rect(self.image, COLORS['paddle shadow'], pg.FRect((0, 0), SIZE['paddle']), 0, 5)
+
         # rect & movement
         self.direction = 0
 
@@ -53,7 +57,6 @@ class Player(Paddle):
         keys = pg.key.get_pressed()
         self.direction = max(int(keys[pg.K_s]), int(keys[pg.K_d])) - max(int(keys[pg.K_w]), int(keys[pg.K_a]))
 
-
 class Ball(pg.sprite.Sprite):
     def __init__(self, groups, paddle_sprites, update_score):
         super().__init__(groups)
@@ -65,18 +68,33 @@ class Ball(pg.sprite.Sprite):
         self.rect = self.image.get_frect(center = (WINDOW_WIDTH / 2, WINDOW_HEIGHT / 2))
         self.old_rect = self.rect.copy()
 
+        # shadow
+        self.shadow_surf = self.image.copy()
+        pg.draw.circle(self.shadow_surf, COLORS['ball shadow'], (SIZE['ball'][0] / 2, SIZE['ball'][1] / 2), radius = SIZE['ball'][1] / 2)
+
+
         # rect and movement
         self.direction = Vector2(choice((-1, 1)), uniform(0.4, 0.8) * choice((-1, 1)))
         self.speed = SPEED['ball']
+        self.speed_modifier = 1
 
         # sprites
         self.paddle_sprites = paddle_sprites
 
+        # timer
+        self.start_time = pg.time.get_ticks()
+        self.respawn_time = 1100
+
+    def timer(self):
+        if pg.time.get_ticks() - self.start_time >= self.respawn_time:
+            self.speed_modifier = 1
+        else:
+            self.speed_modifier = 0
 
     def move(self, dt):
-        self.rect.x += self.direction.x * self.speed * dt
+        self.rect.x += self.direction.x * self.speed * dt * self.speed_modifier
         self.collision('horizontal')
-        self.rect.y += self.direction.y * self.speed * dt
+        self.rect.y += self.direction.y * self.speed * dt * self.speed_modifier
         self.collision('vertical')
 
     def collision(self, direction):
@@ -118,9 +136,11 @@ class Ball(pg.sprite.Sprite):
 
     def update(self, dt):
         self.old_rect = self.rect.copy()
+        self.timer()
         self.move(dt)
         self.wall_collision()
 
     def reset(self):
         self.rect.center = (WINDOW_WIDTH / 2, WINDOW_HEIGHT / 2)
         self.direction = Vector2(choice((-1, 1)), uniform(0.4, 0.8) * choice((-1, 1)))
+        self.start_time = pg.time.get_ticks()

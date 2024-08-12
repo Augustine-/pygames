@@ -1,5 +1,7 @@
 from settings import *
 from sprites import *
+import json
+from groups import AllSprites
 
 class Game:
     def __init__(self):
@@ -15,7 +17,7 @@ class Game:
         self.running = True
 
         # sprites
-        self.all_sprites = pg.sprite.Group()
+        self.all_sprites = AllSprites()
         self.paddle_sprites = pg.sprite.Group()
 
         self.player = Player((self.all_sprites, self.paddle_sprites))
@@ -23,7 +25,12 @@ class Game:
         self.opponent = Opponnent((self.all_sprites, self.paddle_sprites), self.ball)
 
         # score
-        self.score = {'player': 0, 'opponent': 0}
+        try:
+            with open(join('data', 'score.txt')) as score_f:
+                self.score = json.load(score_f)
+        except:
+            self.score = {'player': 0, 'opponent': 0}
+
         self.font = pg.font.Font(None, 160)
 
     def display_score(self):
@@ -51,6 +58,8 @@ class Game:
             for event in pg.event.get():
                 if event.type == pg.QUIT:
                     self.running = False
+                    with open(join('data', 'score.txt'), 'w') as f:
+                        json.dump(self.score, f)
 
             # updates
             # self.input(dt)
@@ -58,7 +67,7 @@ class Game:
 
             # render
             self.screen.fill(COLORS['bg'])
-            self.all_sprites.draw(self.screen)
+            self.all_sprites.draw()
             self.display_score()
 
             pg.display.update()
