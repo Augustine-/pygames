@@ -1,6 +1,5 @@
 from settings import *
-from random import randint, uniform
-
+from sprites import *
 
 class Game:
     def __init__(self):
@@ -15,26 +14,34 @@ class Game:
         self.clock = pg.time.Clock()
         self.running = True
 
-        # groups
+        # sprites
         self.all_sprites = pg.sprite.Group()
+        self.paddle_sprites = pg.sprite.Group()
 
-        self.setup()
+        self.player = Player((self.all_sprites, self.paddle_sprites))
+        self.ball = Ball(self.all_sprites, self.paddle_sprites, self.update_score)
+        self.opponent = Opponnent((self.all_sprites, self.paddle_sprites), self.ball)
 
-    def setup(self):
-        self.player = Paddle('player', self.all_sprites)
-        self.opponent = Paddle('opponent', self.all_sprites)
-        self.ball = Ball(self.all_sprites)
+        # score
+        self.score = {'player': 0, 'opponent': 0}
+        self.font = pg.font.Font(None, 160)
 
-    def input(self, dt):
-        keys = pg.key.get_pressed()
-        self.player.direction.y = max(int(keys[pg.K_s]), int(keys[pg.K_d])) - max(int(keys[pg.K_w]), int(keys[pg.K_a]))
-        self.player.rect.center += self.player.direction * self.player.speed * dt
+    def display_score(self):
+        # player
+        player_surf = self.font.render(str(self.score['player']), True, COLORS['bg detail'])
+        player_rect = player_surf.get_frect(center = (WINDOW_WIDTH / 2 + 100, WINDOW_HEIGHT / 2))
+        self.screen.blit(player_surf, player_rect)
 
-        if self.player.rect.top <= 0:
-            self.player.rect.top = 0
-        if self.player.rect.bottom >= WINDOW_HEIGHT - 1:
-            self.player.rect.bottom = WINDOW_HEIGHT - 1
+        # opponent
+        opp_surf = self.font.render(str(self.score['opponent']), True, COLORS['bg detail'])
+        opp_rect = opp_surf.get_frect(center = (WINDOW_WIDTH / 2 - 100, WINDOW_HEIGHT / 2))
+        self.screen.blit(opp_surf, opp_rect)
 
+        # line
+        pg.draw.line(self.screen, COLORS['bg detail'], (WINDOW_WIDTH / 2, 0), (WINDOW_WIDTH / 2, WINDOW_HEIGHT), 8)
+
+    def update_score(self, side):
+        self.score[side] += 1
 
     def run(self):
         while self.running:
@@ -46,51 +53,16 @@ class Game:
                     self.running = False
 
             # updates
-            self.input(dt)
+            # self.input(dt)
             self.all_sprites.update(dt)
 
             # render
             self.screen.fill(COLORS['bg'])
             self.all_sprites.draw(self.screen)
+            self.display_score()
 
             pg.display.update()
         pg.quit()
-
-
-class Paddle(pg.sprite.Sprite):
-    def __init__(self, side, groups):
-        super().__init__(groups)
-        self.image = pg.Surface(SIZE['paddle'])
-        self.rect = pg.FRect(POS[side], SIZE['paddle'])
-        self.pos = POS[side]
-        self.speed = SPEED[side]
-        self.direction = Vector2()
-
-        self.image.fill(COLORS['paddle'])
-
-class Ball(pg.sprite.Sprite):
-    def __init__(self, groups):
-        super().__init__(groups)
-        self.image = pg.Surface(SIZE['ball'], pg.SRCALPHA)
-        pg.draw.circle(self.image, COLORS['ball'], (15, 15), radius = 15)
-        self.rect = self.image.get_frect(center = (WINDOW_WIDTH / 2, WINDOW_HEIGHT / 2))
-
-        self.direction = Vector2(uniform(-1, 1), uniform(-1, 1))
-        self.speed = SPEED['ball']
-
-    def move(self, dt):
-        if self.rect.left <= 0 or self.rect.right >= WINDOW_WIDTH:
-            self.direction.x *= -1
-        if self.rect.top <= 0 or self.rect.bottom >= WINDOW_HEIGHT:
-            self.direction.y *= -1
-
-        self.rect.center += self.direction * self.speed * dt
-
-    def update(self, dt):
-        self.move(dt)
-
-
-
 
 
 if __name__ == '__main__':
