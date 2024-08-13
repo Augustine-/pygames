@@ -47,7 +47,6 @@ class Game:
     def load_images(self):
         self.bullet_surf = pygame.image.load(join('images', 'gun', 'bullet.png')).convert_alpha()
 
-
         for enemy in self.enemies:
             self.enemy_frames[enemy] = []
             for path, _, files in walk(join('images', 'enemies', enemy)):
