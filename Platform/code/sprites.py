@@ -1,10 +1,52 @@
 from settings import *
+from math import sin
+from timer import Timer
+from random import randint
 
 class Sprite(pg.sprite.Sprite):
     def __init__(self, pos, surf, groups):
         super().__init__(groups)
         self.image = surf
         self.rect = self.image.get_frect(topleft = pos)
+
+class Bullet(Sprite):
+    def __init__(self, pos, surf, groups, direction):
+        super().__init__(pos, surf, groups)
+
+        # adjust
+        self.image =  pg.transform.flip(self.image, direction == -1, False)
+
+        # movement
+        self.direction = direction
+        self.speed = 850
+
+    def update(self, dt):
+        self.rect.x += self.direction * self.speed * dt
+
+class Fire(Sprite):
+    def __init__(self, pos, surf, groups, player):
+        super().__init__(pos, surf, groups)
+        self.player = player
+        self.flip = player.flip
+        self.timer = Timer(100, autostart = True, func = self.kill)
+        self.y_offset = Vector2(0, 8)
+
+        if self.player.flip:
+            self.rect.midright = self.player.rect.midleft + self.y_offset
+            self.image = pg.transform.flip(self.image, True, False)
+        else:
+            self.rect.midleft = self.player.rect.midright + self.y_offset
+
+    def update(self, _):
+        self.timer.update()
+
+        if self.player.flip:
+            self.rect.midright = self.player.rect.midleft + self.y_offset
+        else:
+            self.rect.midleft = self.player.rect.midright + self.y_offset
+
+        if self.flip != self.player.flip:
+            self.kill()
 
 class AnimatedSprite(Sprite):
     def __init__(self, frames, pos, groups):
@@ -17,20 +59,14 @@ class AnimatedSprite(Sprite):
         self.frame_index += self.animation_speed * dt
         self.image = self.frames[int(self.frame_index) % len(self.frames)]
 
+    def update(self, dt):
+        self.animate(dt)
+
 
 class Player(AnimatedSprite):
-    def __init__(self, pos, groups, collision_sprites, frames):
+    def __init__(self, frames, pos, groups, collision_sprites, spawn_bullet):
         super().__init__(frames, pos, groups)
-
-        # animation
         self.flip = False
-        self.frames = []
-        self.load_images()
-        self.frame_index = 0
-
-        # image
-        self.image = self.frames[0]
-        self.rect = self.image.get_frect(center = pos)
 
         # movement
         self.on_floor = False
@@ -38,6 +74,12 @@ class Player(AnimatedSprite):
         self.gravity = 50
         self.direction = Vector2()
         self.collision_sprites = collision_sprites
+
+        # timer
+        self.shoot_timer = Timer(500)
+
+        # bullet
+        self.spawn_bullet = spawn_bullet
 
 
     def load_images(self):
@@ -51,6 +93,10 @@ class Player(AnimatedSprite):
 
         if keys[pg.K_SPACE] and self.on_floor:
             self.direction.y = -20
+
+        if keys[pg.K_s] and not self.shoot_timer:
+            self.spawn_bullet(self.rect.center, -1 if self.flip else 1)
+            self.shoot_timer.activate()
 
 
     def move(self, dt):
@@ -98,11 +144,48 @@ class Player(AnimatedSprite):
         self.on_floor = True if bottom_rect.collidelist(level_rects) >= 0 else False
 
     def update(self, dt):
+        self.shoot_timer.update()
         self.check_floor()
         self.input()
         self.move(dt)
         self.animate(dt)
 
 
+class Enemy(AnimatedSprite):
+    def __init__(self, frames, pos, groups):
+        super().__init__(frames, pos, groups)
 
+    def update(self, dt):
+        self.move(dt)
+        self.animate(dt)
+        self.constraint()
 
+class Worm(Enemy):
+    def __init__(self, frames, pos, groups, bounds):
+        super().__init__(frames, pos, groups)
+        self.speed = 200
+        self.direction   = 1
+        self.left_bound  = bounds[0]
+        self.right_bound = bounds[1]
+
+    def move(self, dt):
+        self.rect.x += self.speed * self.direction * dt
+
+    def constraint(self):
+        if self.rect.left <= self.left_bound or self.rect.right >= self.right_bound:
+            self.direction *= -1
+
+class Bee(Enemy):
+    def __init__(self, frames, pos, groups, speed):
+        super().__init__(frames, pos, groups)
+        self.speed = speed
+        self.amplitude = randint(500, 600)
+        self.frequency = randint(300, 600)
+
+    def move(self, dt):
+        self.rect.x -= self.speed * dt
+        self.rect.y += sin(pg.time.get_ticks() / self.frequency) * self.amplitude * dt
+
+    def constraint(self):
+        if self.rect.right <= 0:
+            self.kill()

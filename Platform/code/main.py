@@ -2,6 +2,7 @@ from settings import *
 from sprites import *
 from util import *
 from groups import AllSprites
+from random import randint
 
 
 class Game:
@@ -15,10 +16,28 @@ class Game:
         # groups
         self.all_sprites = AllSprites()
         self.collision_sprites = AllSprites()
+        self.enemy_sprites = AllSprites()
+        self.bullet_sprites = AllSprites()
 
         # setup
         self.load_assets()
         self.setup()
+
+        # timers
+        self.bee_timer = Timer(500, func = self.spawn_bee, autostart = True, repeat = True)
+
+    def spawn_bee(self):
+        Bee(
+            frames = self.bee_frames,
+            pos = (self.level_width + WINDOW_WIDTH, randint(0, self.level_height)),
+            groups = (self.all_sprites, self.enemy_sprites),
+            speed = randint(300, 500)
+        )
+
+    def spawn_bullet(self, pos, direction):
+        x = pos[0] + direction * 34 if direction == 1 else pos[0] + direction * 34 - self.bullet_surf.get_width()
+        Bullet((x, pos[1]), self.bullet_surf, (self.all_sprites, self.bullet_sprites), direction)
+        Fire(pos, self.fire_surf, self.all_sprites, self.player)
 
 
     def load_assets(self):
@@ -30,10 +49,12 @@ class Game:
         self.fire_surf = import_image('images', 'gun', 'fire')
 
         # audio
+        self.audio = import_audio('audio')
 
     def setup(self):
         map = load_pygame(join('data', 'maps', 'world.tmx'))
-        # self.music.play(loops = -1)
+        self.level_width = map.width * TILE_SIZE
+        self.level_height = map.height * TILE_SIZE
 
         for x, y, image in map.get_layer_by_name('Main').tiles():
             Sprite((x*TILE_SIZE, y*TILE_SIZE), image, (self.all_sprites, self.collision_sprites))
@@ -43,7 +64,15 @@ class Game:
 
         for obj in map.get_layer_by_name('Entities'):
             if obj.name == 'Player':
-                self.player = Player((obj.x, obj.y), self.all_sprites, self.collision_sprites, self.player_frames)
+                self.player = Player(self.player_frames, (obj.x, obj.y), self.all_sprites, self.collision_sprites, self.spawn_bullet)
+            elif obj.name == 'Worm':
+                x_offset = obj.width // 2
+                y_offset = obj.height // 2
+                x = obj.x + x_offset
+                y = obj.y + y_offset
+                bounds = (obj.x, obj.x + obj.width)
+                Worm(self.worm_frames, (x, y), (self.all_sprites, self.enemy_sprites), bounds)
+
 
     def run(self):
         while self.running:
@@ -54,6 +83,7 @@ class Game:
                     self.running = False
 
             # update
+            self.bee_timer.update()
             self.all_sprites.update(dt)
 
             # draw
