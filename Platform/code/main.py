@@ -38,6 +38,7 @@ class Game:
         x = pos[0] + direction * 34 if direction == 1 else pos[0] + direction * 34 - self.bullet_surf.get_width()
         Bullet((x, pos[1]), self.bullet_surf, (self.all_sprites, self.bullet_sprites), direction)
         Fire(pos, self.fire_surf, self.all_sprites, self.player)
+        self.audio['shoot'].play()
 
 
     def load_assets(self):
@@ -66,12 +67,9 @@ class Game:
             if obj.name == 'Player':
                 self.player = Player(self.player_frames, (obj.x, obj.y), self.all_sprites, self.collision_sprites, self.spawn_bullet)
             elif obj.name == 'Worm':
-                x_offset = obj.width // 2
-                y_offset = obj.height // 2
-                x = obj.x + x_offset
-                y = obj.y + y_offset
-                bounds = (obj.x, obj.x + obj.width)
-                Worm(self.worm_frames, (x, y), (self.all_sprites, self.enemy_sprites), bounds)
+                Worm(self.worm_frames, pg.FRect(obj.x, obj.y, obj.width, obj.height), (self.all_sprites, self.enemy_sprites))
+
+        self.audio['music'].play(loops = -1)
 
 
     def run(self):
@@ -85,6 +83,7 @@ class Game:
             # update
             self.bee_timer.update()
             self.all_sprites.update(dt)
+            self.collision()
 
             # draw
             self.screen.fill(BG_COLOR)
@@ -92,6 +91,18 @@ class Game:
             pg.display.update()
 
         pg.quit()
+
+    def collision(self):
+        for bullet in self.bullet_sprites:
+            sprite_collision = pg.sprite.spritecollide(bullet, self.enemy_sprites, False, pg.sprite.collide_mask)
+            if sprite_collision:
+                self.audio['impact'].play()
+                bullet.kill()
+                for sprite in sprite_collision:
+                    sprite.destroy()
+
+        if pg.sprite.spritecollide(self.player, self.enemy_sprites, False, pg.sprite.collide_mask):
+            self.running = False
 
 if __name__ == '__main__':
     game = Game()
